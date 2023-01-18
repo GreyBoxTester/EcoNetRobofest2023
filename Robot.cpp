@@ -69,16 +69,16 @@ RubbishType Robot::grabAndIdentifyRubbish()
 	{
 		speed = rGrabberMotor.getSpeed();
 		reflect = rColorSensor.getReflect();
-	} while (speed >= -4 && reflect > 15);
+	} while (speed >= -4 && reflect > RIGHT_ARM_REFLECT);
 
-	while (speed < -4 && reflect > 15)
+	while (speed < -4 && reflect > RIGHT_ARM_REFLECT)
 	{
 		speed = rGrabberMotor.getSpeed();
 		reflect = rColorSensor.getReflect();
 	}
 
-	if (reflect > 15) { rGrabberMotor.rotate(-rGrabberMotor.getCounts(), GRABBER_MOTORS_POWER); }
-	else { rGrabberMotor.rotate(-105, GRABBER_MOTORS_POWER); }
+	if (reflect > RIGHT_ARM_REFLECT) { rGrabberMotor.rotate(-rGrabberMotor.getCounts() + 135, GRABBER_MOTORS_POWER); }
+	else { rGrabberMotor.rotate(30, GRABBER_MOTORS_POWER); }
 
 	RubbishType rubbish = RubbishType::Bottle;
 
@@ -91,9 +91,9 @@ RubbishType Robot::grabAndIdentifyRubbish()
 		ev3::Time::sleep(100);
 		lGrabberMotor.stop(true);
 		int32_t sizeAngle = lGrabberMotor.getCounts();
-		//bottles > 65 (70-95)
-		//cans > 25 (30-50)
-		//paper < 25 (10-20)
+		//bottles > 60 (70-95)
+		//cans > 27 (30-50)
+		//paper < 27 (10-20)
 		ev3::Console::write("%d", sizeAngle);
 		if (sizeAngle < 27) { rubbish = RubbishType::Paper; break; }
 		if (sizeAngle < 60) { rubbish = RubbishType::Can; break; }

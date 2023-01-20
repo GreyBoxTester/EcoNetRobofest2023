@@ -16,7 +16,7 @@ void emergencyButtonHandler(intptr_t unused)
 	robot.emergencyStop();
 }
 
-void execution_task(intptr_t unused)
+void executionTask(intptr_t unused)
 {
 	switch (currentPacket.cmd)
 	{
@@ -32,7 +32,7 @@ void execution_task(intptr_t unused)
 	executionDone = true;
 }
 
-void main_task(intptr_t unused)
+void mainTask(intptr_t unused)
 {
 	ev3::Brick::setButtonHandler(ev3::BrickButton::Down, emergencyButtonHandler, 0);
 	ev3::Speaker::playTone(ev3::Note::A4, 50);

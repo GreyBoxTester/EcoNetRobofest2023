@@ -67,7 +67,7 @@ RubbishType Robot::grabAndIdentifyRubbish()
 	{
 		speed = rGrabberMotor.getSpeed();
 		color = rColorSensor.getColor();
-	} while (!(speed < -4 && color != ev3::ColorDef::Yellow));
+	} while (!(speed < -6 && color != ev3::ColorDef::Yellow));
 	
 	ev3::Time::delay(1);
 	
@@ -87,7 +87,7 @@ RubbishType Robot::grabAndIdentifyRubbish()
 	for (int i = 0; i < 2; i++)
 	{
 		lGrabberMotor.setPower(-GRABBER_MOTORS_POWER);
-		while (lGrabberMotor.getSpeed() >= -4) { ev3::Time::delay(1); }
+		while (lGrabberMotor.getSpeed() > -6) { ev3::Time::delay(1); }
 		while (lGrabberMotor.getSpeed() < -4) { ev3::Time::delay(1); }
 		lGrabberMotor.stop(false);
 		ev3::Time::delay(100);
@@ -98,8 +98,9 @@ RubbishType Robot::grabAndIdentifyRubbish()
 		//cans > 27 (30-50)
 		//paper < 27 (10-20)
 		ev3::Console::write("%d", sizeAngle);
+		if (sizeAngle < 4) { rubbish = RubbishType::Bottle; break; } //bottle dropped and rolled away
 		if (sizeAngle < 27) { rubbish = RubbishType::Paper; break; }
-		if (sizeAngle < 60) { rubbish = RubbishType::Can; break; }
+		if (sizeAngle < 67) { rubbish = RubbishType::Can; break; }
 
 		if (i == 0) 
 		{ 
@@ -115,10 +116,10 @@ RubbishType Robot::grabAndIdentifyRubbish()
 
 void Robot::placeRubbish()
 {
-	lGrabberMotor.rotate(180 - lGrabberMotor.getCounts(), GRABBER_MOTORS_POWER);
-	rGrabberMotor.setPower(GRABBER_MOTORS_POWER);
 	lMotor.setPower(-10);
 	rMotor.setPower(-10);
+	lGrabberMotor.rotate(180 - lGrabberMotor.getCounts(), GRABBER_MOTORS_POWER);
+	rGrabberMotor.setPower(GRABBER_MOTORS_POWER);
 	ev3::Time::delay(500);
 	lMotor.stop(true);
 	rMotor.stop(true);

@@ -10,6 +10,7 @@ enum class Command : uint8_t
 	Stop,
 	GrabRubbish,
 	PlaceRubbish,
+	AbortCurrentTask,
 	EmergencyStop,
 	SetPower
 };

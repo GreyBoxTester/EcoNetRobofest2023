@@ -11,7 +11,7 @@ Robot::Robot()
 {
 	lGrabberMotor.rotate(180, GRABBER_MOTORS_POWER);
 	rGrabberMotor.rotate(-135, GRABBER_MOTORS_POWER);
-	while (!(distanceSensor.ready() && rColorSensor.ready())) { ev3::Time::sleep(10); }
+	while (!(distanceSensor.ready() && rColorSensor.ready())) { ev3::Time::delay(10); }
 }
 
 void Robot::driveForward()
@@ -54,7 +54,7 @@ RubbishType Robot::grabAndIdentifyRubbish()
 {	
 	lMotor.setPower(DEFAULT_POWER);
 	rMotor.setPower(DEFAULT_POWER);
-	while (getDistFilterZero() > OBJECT_DISTANCE);
+	while (getDistFilterZero() > OBJECT_DISTANCE) { ev3::Time::delay(1); }
 	lMotor.setPower(15);
 	rMotor.setPower(15);
 
@@ -70,12 +70,16 @@ RubbishType Robot::grabAndIdentifyRubbish()
 		speed = rGrabberMotor.getSpeed();
 		reflect = rColorSensor.getReflect();
 	} while (speed >= -4 && reflect > RIGHT_ARM_REFLECT);
-
+	
+	ev3::Time::delay(1);
+	
 	while (speed < -4 && reflect > RIGHT_ARM_REFLECT)
 	{
 		speed = rGrabberMotor.getSpeed();
 		reflect = rColorSensor.getReflect();
 	}
+
+	ev3::Time::delay(1);
 
 	if (reflect > RIGHT_ARM_REFLECT) { rGrabberMotor.rotate(-rGrabberMotor.getCounts() + 135, GRABBER_MOTORS_POWER); }
 	else { rGrabberMotor.rotate(30, GRABBER_MOTORS_POWER); }
@@ -85,10 +89,10 @@ RubbishType Robot::grabAndIdentifyRubbish()
 	for (int i = 0; i < 2; i++)
 	{
 		lGrabberMotor.setPower(-GRABBER_MOTORS_POWER);
-		while (lGrabberMotor.getSpeed() >= -4);
-		while (lGrabberMotor.getSpeed() < -4);
+		while (lGrabberMotor.getSpeed() >= -4) { ev3::Time::delay(1); }
+		while (lGrabberMotor.getSpeed() < -4) { ev3::Time::delay(1); }
 		lGrabberMotor.stop(false);
-		ev3::Time::sleep(100);
+		ev3::Time::delay(100);
 		lGrabberMotor.stop(true);
 		int32_t sizeAngle = lGrabberMotor.getCounts();
 		//bottles > 60 (70-95)
@@ -101,9 +105,10 @@ RubbishType Robot::grabAndIdentifyRubbish()
 		if (i == 0) 
 		{ 
 			lGrabberMotor.rotate(150 - lGrabberMotor.getCounts(), GRABBER_MOTORS_POWER);
-			ev3::Time::sleep(300);
+			ev3::Time::delay(300);
 		}
 	}
+
 	lGrabberMotor.stop(true);
 	lMotor.stop(true); 
 	rMotor.stop(true);
@@ -116,11 +121,20 @@ void Robot::placeRubbish()
 	rGrabberMotor.setPower(GRABBER_MOTORS_POWER);
 	lMotor.setPower(-10);
 	rMotor.setPower(-10);
-	ev3::Time::sleep(500);
+	ev3::Time::delay(500);
 	lMotor.stop(true);
 	rMotor.stop(true);
-	while (rColorSensor.getReflect() > 15);
+	while (rColorSensor.getReflect() > 15) { ev3::Time::delay(1); }
 	rGrabberMotor.rotate(-105, GRABBER_MOTORS_POWER);
+}
+
+void Robot::driveBack()
+{
+	lMotor.setPower(-DEFAULT_POWER);
+	rMotor.setPower(-DEFAULT_POWER);
+	while (lMotor.getCounts() > 0);
+	lMotor.stop(true);
+	rMotor.stop(true);
 }
 
 void Robot::emergencyStop()
@@ -133,9 +147,9 @@ void Robot::emergencyStop()
 	for (int i = 0; i < 2; i++)
 	{
 		ev3::Brick::setLEDColor(ev3::LEDColor::Red);
-		ev3::Time::sleep(300);
+		ev3::Time::delay(300);
 		ev3::Brick::setLEDColor(ev3::LEDColor::Off);
-		ev3::Time::sleep(300);
+		ev3::Time::delay(300);
 	}
 	ev3::Brick::setLEDColor(ev3::LEDColor::Red);
 }

@@ -20,6 +20,7 @@ public:
 	void stop();
 	RubbishType grabAndIdentifyRubbish();
 	void placeRubbish();
+	void driveBack();
 	void emergencyStop();
 	void setDrivePower(uint8_t power);
 private:

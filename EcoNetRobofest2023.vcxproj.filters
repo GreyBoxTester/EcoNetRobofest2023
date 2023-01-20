@@ -29,9 +29,15 @@
     <ClInclude Include="Robot.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Protocol.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Makefile.inc">
+      <Filter>Build files</Filter>
+    </None>
+    <None Include="app.cfg">
       <Filter>Build files</Filter>
     </None>
   </ItemGroup>

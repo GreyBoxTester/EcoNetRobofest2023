@@ -4,8 +4,7 @@
 #define GRABBER_MOTORS_POWER 40
 #define DEFAULT_POWER 30
 #define TURN_POWER 20
-#define OBJECT_DISTANCE 21
-#define RIGHT_ARM_REFLECT 10
+#define OBJECT_DISTANCE 20
 
 enum class RubbishType : uint8_t { Paper, Can, Bottle };
 

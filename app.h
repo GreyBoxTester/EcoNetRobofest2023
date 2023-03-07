@@ -26,7 +26,6 @@ extern "C" {
 #ifndef TOPPERS_MACRO_ONLY
 
 extern void	mainTask(intptr_t exinf);
-extern void executionTask(intptr_t unused);
 
 #endif
 

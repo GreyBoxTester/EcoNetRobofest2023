@@ -79,7 +79,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="app.h" />
-    <ClInclude Include="Protocol.h" />
     <ClInclude Include="Robot.h" />
   </ItemGroup>
   <ItemGroup>

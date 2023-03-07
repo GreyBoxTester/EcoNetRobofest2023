@@ -14,42 +14,6 @@ Robot::Robot()
 	while (!(distanceSensor.ready() && rColorSensor.ready())) { ev3::Time::delay(10); }
 }
 
-void Robot::driveForward()
-{
-	lDrivePower = DEFAULT_POWER;
-	rDrivePower = DEFAULT_POWER;
-	drive();
-}
-
-void Robot::driveBackward()
-{
-	lDrivePower = -DEFAULT_POWER;
-	rDrivePower = -DEFAULT_POWER;
-	drive();
-}
-
-void Robot::turnLeft()
-{
-	lDrivePower = 0;
-	rDrivePower = DEFAULT_POWER;
-	drive();
-}
-
-void Robot::turnRight()
-{
-	lDrivePower = DEFAULT_POWER;
-	rDrivePower = 0;
-	drive();
-}
-
-void Robot::stop()
-{
-	lDrivePower = 0;
-	rDrivePower = 0;
-	drive();
-}
-
-
 RubbishType Robot::grabAndIdentifyRubbish()
 {	
 	lMotor.setPower(DEFAULT_POWER);
@@ -65,14 +29,14 @@ RubbishType Robot::grabAndIdentifyRubbish()
 	ev3::ColorDef color;
 	do
 	{
+		ev3::Time::delay(1);
 		speed = rGrabberMotor.getSpeed();
 		color = rColorSensor.getColor();
 	} while (!(speed < -6 && color != ev3::ColorDef::Yellow));
 	
-	ev3::Time::delay(1);
-	
 	while (speed < -4 && color != ev3::ColorDef::Yellow)
 	{
+		ev3::Time::delay(1);
 		speed = rGrabberMotor.getSpeed();
 		color = rColorSensor.getColor();
 	}
@@ -94,8 +58,8 @@ RubbishType Robot::grabAndIdentifyRubbish()
 		lGrabberMotor.stop(true);
 		int32_t sizeAngle = lGrabberMotor.getCounts();
 		lGrabberMotor.setPower(-10);
-		//bottles > 60 (70-95)
-		//cans > 27 (30-50)
+		//bottles > 67 (70-95)
+		//cans > 27 (30-55)
 		//paper < 27 (10-20)
 		ev3::Console::write("%d", sizeAngle);
 		if (sizeAngle < 4) { rubbish = RubbishType::Bottle; break; } //bottle dropped and rolled away
@@ -127,15 +91,6 @@ void Robot::placeRubbish()
 	rGrabberMotor.rotate(-105, GRABBER_MOTORS_POWER);
 }
 
-void Robot::driveBack()
-{
-	lMotor.setPower(-DEFAULT_POWER);
-	rMotor.setPower(-DEFAULT_POWER);
-	while (lMotor.getCounts() > 0);
-	lMotor.stop(true);
-	rMotor.stop(true);
-}
-
 void Robot::emergencyStop()
 {
 	lMotor.stop(false);
@@ -153,21 +108,9 @@ void Robot::emergencyStop()
 	ev3::Brick::setLEDColor(ev3::LEDColor::Red);
 }
 
-void Robot::setDrivePower(uint8_t power)
-{
-	powerPercent = power;
-	drive();
-}
-
 uint16_t Robot::getDistFilterZero()
 {
 	uint16_t dist = 0;
 	do { dist = distanceSensor.getDistance(); } while (dist == 0);
 	return dist;
-}
-
-void Robot::drive()
-{
-	lMotor.setPower((int)lDrivePower * (int)powerPercent / 100);
-	rMotor.setPower((int)rDrivePower * (int)powerPercent / 100);
 }

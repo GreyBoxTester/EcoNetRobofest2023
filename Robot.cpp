@@ -7,17 +7,24 @@ Robot::Robot()
 	  rGrabberMotor(ev3::MotorPort::D, ev3::MotorType::Unregulated, false),
 	  //lColorSensor(ev3::SensorPort::S2),
 	  rColorSensor(ev3::SensorPort::S3),
-	  distanceSensor(ev3::SensorPort::S1)
+	  distanceSensor(ev3::SensorPort::S1),
+	  gyroSensor(ev3::SensorPort::S4),
+	  directionAngle(0),
+	  totalAngle(0),
+	  currentDirection(0, 1),
+	  position(0, 0),
+	  driver(gyroSensor, directionAngle, Robot::diffFunc, lMotor, rMotor)
 {
 	lGrabberMotor.rotate(180, GRABBER_MOTORS_POWER);
 	rGrabberMotor.rotate(-135, GRABBER_MOTORS_POWER);
-	while (!(distanceSensor.ready() && rColorSensor.ready())) { ev3::Time::delay(10); }
+	while (!(distanceSensor.ready() && rColorSensor.ready() && gyroSensor.ready())) { ev3::Time::delay(10); }
+	driver.setCoefficents(1.1f, 0.4f);
 }
 
 RubbishType Robot::grabAndIdentifyRubbish()
 {	
-	lMotor.setPower(DEFAULT_POWER);
-	rMotor.setPower(DEFAULT_POWER);
+	lMotor.setPower(DEFAULT_SPEED);
+	rMotor.setPower(DEFAULT_SPEED);
 	while (getDistFilterZero() > OBJECT_DISTANCE) { ev3::Time::delay(1); }
 	lMotor.setPower(15);
 	rMotor.setPower(15);
@@ -108,9 +115,115 @@ void Robot::emergencyStop()
 	ev3::Brick::setLEDColor(ev3::LEDColor::Red);
 }
 
+void Robot::turnToDirection(ev3::Vector2c direction)
+{
+	if (currentDirection == direction) { return; }
+
+	int16_t angle;
+	if (direction.x == 0 && direction.y == 1) { angle = 0; }
+	else if (direction.x == 1 && direction.y == 0) { angle = 90; }
+	else if (direction.x == 0 && direction.y == -1) { angle = 180; }
+	else { angle = -90; } // (direction.x == -1 && direction.y == 0)
+
+	currentDirection = direction;
+
+	turnToAngle(angle);
+}
+
+void Robot::turnToAngle(int16_t angle)
+{
+	ev3::Time::Clock clock;
+	driver.setSpeed(0);
+	if (std::abs(angle - directionAngle) == 180)
+	{
+		directionAngle = angle;
+		if (totalAngle > 0)
+		{
+			lMotor.setPower(-TURN_SPEED);
+			rMotor.setPower(TURN_SPEED);
+			totalAngle -= 180;
+		}
+		else
+		{
+			lMotor.setPower(TURN_SPEED);
+			rMotor.setPower(-TURN_SPEED);
+			totalAngle += 180;
+		}
+
+		while (clock.getElapsedTime() < NINETY_DEGREE_TURN_TIME / 2);
+		while (clock.getElapsedTime() < NINETY_DEGREE_TURN_TIME * 2) { driver.drive(); }
+	}
+	else
+	{
+		if (angle - directionAngle < 0) { totalAngle -= 90; }
+		else { totalAngle += 90; }
+		//totalAngle += angle - directionAngle;
+		directionAngle = angle;
+
+		while (clock.getElapsedTime() < NINETY_DEGREE_TURN_TIME) { driver.drive(); }
+	}
+
+	ev3::LCD::clear();
+	char num[5];
+	itoa(totalAngle, num, 10);
+	ev3::LCD::drawString(num, 50, 20);
+}
+
+void Robot::driveForMotorCounts(int counts)
+{
+	lMotor.resetCounts();
+	if (counts > 0)
+	{
+		driver.setSpeed(DEFAULT_SPEED);
+		while (lMotor.getCounts() < counts) { driver.drive(); }
+	}
+	else if (counts < 0)
+	{
+		driver.setSpeed(-DEFAULT_SPEED);
+		while (lMotor.getCounts() > counts) { driver.drive(); }
+	}
+}
+
+void Robot::driveOneCellForward(bool driveToCenter)
+{
+	driver.setSpeed(DEFAULT_SPEED);
+	while (rColorSensor.getColor() != ev3::ColorDef::Black) { driver.drive(); }
+	if (driveToCenter) { driveForMotorCounts(DRIVE_TO_CENTER_COUNTS); }
+	position += currentDirection;
+}
+
+void Robot::drivePath(std::vector<ev3::Vector2c>::iterator begin, std::vector<ev3::Vector2c>::iterator end, bool driveToLastCellCenter)
+{
+	end--;
+	for (; begin != end; begin++)
+	{
+		ev3::Vector2c direction = *(begin + 1) - *begin;
+		turnToDirection(direction);
+		driveOneCellForward((begin != end - 1) || driveToLastCellCenter);
+	}
+	driver.stop();
+}
+
+void Robot::stop()
+{
+	driver.stop();
+}
+
 uint16_t Robot::getDistFilterZero()
 {
 	uint16_t dist = 0;
 	do { dist = distanceSensor.getDistance(); } while (dist == 0);
 	return dist;
+}
+
+float Robot::diffFunc(ev3::Tuple<ev3::GyroSensor*, int16_t*>& sensors)
+{
+	int16_t angle = (*sensors.getRest().current - sensors.current->getAngle()) % 360;
+	if (angle < 0) { angle += 360; }
+	if (angle > 180) { angle -= 360; }
+
+	if (angle < -20) { angle = -20; }
+	else if (angle > 20) { angle = 20; }
+
+	return angle;
 }

@@ -22,7 +22,7 @@ public:
 	void turnToAngle(int16_t angle);
 	void driveForMotorCounts(int counts);
 	void driveOneCellForward(bool driveToCenter);
-	void drivePath(std::vector<ev3::Vector2c>::iterator begin, std::vector<ev3::Vector2c>::iterator end, bool driveToLastCellCenter);
+	void followPath(ev3::Vector2c* begin, ev3::Vector2c* end, bool driveToLastCellCenter);
 	void stop();
 private:
 	uint16_t getDistFilterZero();

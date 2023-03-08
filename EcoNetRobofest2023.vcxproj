@@ -75,10 +75,16 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="app.cpp" />
+    <ClCompile Include="Field.cpp" />
+    <ClCompile Include="Path.cpp" />
+    <ClCompile Include="PathGen.cpp" />
     <ClCompile Include="Robot.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="app.h" />
+    <ClInclude Include="Field.h" />
+    <ClInclude Include="Path.h" />
+    <ClInclude Include="PathGen.h" />
     <ClInclude Include="Robot.h" />
   </ItemGroup>
   <ItemGroup>

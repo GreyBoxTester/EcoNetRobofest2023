@@ -1,6 +1,6 @@
 APPL_COBJS += 
 
-APPL_CXXOBJS += Robot.o
+APPL_CXXOBJS += Robot.o Field.o Path.o PathGen.o
 
 SRCLANG := c++
 

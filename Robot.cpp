@@ -133,10 +133,13 @@ void Robot::turnToDirection(ev3::Vector2c direction)
 void Robot::turnToAngle(int16_t angle)
 {
 	ev3::Time::Clock clock;
+	int16_t delta = angle - directionAngle;
+	if (delta < -180) { delta += 360; }
+	if (delta > 180) { delta -= 360; }
+	directionAngle = angle;
 	driver.setSpeed(0);
-	if (std::abs(angle - directionAngle) == 180)
+	if (std::abs(delta) == 180)
 	{
-		directionAngle = angle;
 		if (totalAngle > 0)
 		{
 			lMotor.setPower(-TURN_SPEED);
@@ -155,12 +158,9 @@ void Robot::turnToAngle(int16_t angle)
 	}
 	else
 	{
-		if (angle - directionAngle < 0) { totalAngle -= 90; }
-		else { totalAngle += 90; }
-		//totalAngle += angle - directionAngle;
-		directionAngle = angle;
-
-		while (clock.getElapsedTime() < NINETY_DEGREE_TURN_TIME) { driver.drive(); }
+		totalAngle += delta;
+		unsigned long turnTime = NINETY_DEGREE_TURN_TIME * delta / 90;
+		while (clock.getElapsedTime() < turnTime) { driver.drive(); }
 	}
 
 	ev3::LCD::clear();
@@ -192,8 +192,9 @@ void Robot::driveOneCellForward(bool driveToCenter)
 	position += currentDirection;
 }
 
-void Robot::drivePath(std::vector<ev3::Vector2c>::iterator begin, std::vector<ev3::Vector2c>::iterator end, bool driveToLastCellCenter)
+void Robot::followPath(ev3::Vector2c* begin, ev3::Vector2c* end, bool driveToLastCellCenter)
 {
+	if (begin == end) { return; }
 	end--;
 	for (; begin != end; begin++)
 	{

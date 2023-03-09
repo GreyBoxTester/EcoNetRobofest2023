@@ -6,8 +6,9 @@ Robot::Robot()
 	  lGrabberMotor(ev3::MotorPort::A, ev3::MotorType::Unregulated, false),
 	  rGrabberMotor(ev3::MotorPort::D, ev3::MotorType::Unregulated, false),
 	  //lColorSensor(ev3::SensorPort::S2),
-	  rColorSensor(ev3::SensorPort::S3),
 	  distanceSensor(ev3::SensorPort::S1),
+	  wallDistanceSensor(ev3::SensorPort::S2),
+	  rColorSensor(ev3::SensorPort::S3),
 	  gyroSensor(ev3::SensorPort::S4),
 	  directionAngle(0),
 	  totalAngle(0),
@@ -15,17 +16,30 @@ Robot::Robot()
 	  position(0, 0),
 	  driver(gyroSensor, directionAngle, Robot::diffFunc, lMotor, rMotor)
 {
-	lGrabberMotor.rotate(180, GRABBER_MOTORS_POWER);
-	rGrabberMotor.rotate(-135, GRABBER_MOTORS_POWER);
 	while (!(distanceSensor.ready() && rColorSensor.ready() && gyroSensor.ready())) { ev3::Time::delay(10); }
 	driver.setCoefficents(1.1f, 0.4f);
 }
 
-RubbishType Robot::grabAndIdentifyRubbish()
+void Robot::openGrabbers()
+{
+	lGrabberMotor.rotate(LEFT_GRABBER_MOTOR_OPEN_ANGLE - lGrabberMotor.getCounts(), GRABBER_MOTORS_POWER);
+	rGrabberMotor.rotate(RIGHT_GRABBER_MOTOR_OPEN_ANGLE, GRABBER_MOTORS_POWER);
+}
+
+void Robot::closeGrabbers()
+{
+	lGrabberMotor.rotate(30 - lGrabberMotor.getCounts(), GRABBER_MOTORS_POWER);
+	rGrabberMotor.rotate(-RIGHT_GRABBER_MOTOR_OPEN_ANGLE, GRABBER_MOTORS_POWER);
+}
+
+RubbishType Robot::grabAndIdentifyRubbish(int32_t* countsOut)
 {	
+	lMotor.resetCounts();
 	lMotor.setPower(DEFAULT_SPEED);
 	rMotor.setPower(DEFAULT_SPEED);
 	while (getDistFilterZero() > OBJECT_DISTANCE) { ev3::Time::delay(1); }
+	if (countsOut != nullptr) { *countsOut = lMotor.getCounts(); }
+	lMotor.resetCounts();
 	lMotor.setPower(15);
 	rMotor.setPower(15);
 
@@ -50,7 +64,12 @@ RubbishType Robot::grabAndIdentifyRubbish()
 
 	ev3::Time::delay(1);
 
-	if (color != ev3::ColorDef::Yellow) { rGrabberMotor.rotate(-rGrabberMotor.getCounts() + 135, GRABBER_MOTORS_POWER); }
+	if (color != ev3::ColorDef::Yellow) 
+	{ 
+		lMotor.stop(true);
+		rMotor.stop(true);
+		rGrabberMotor.rotate(-rGrabberMotor.getCounts() - RIGHT_GRABBER_MOTOR_OPEN_ANGLE, GRABBER_MOTORS_POWER);
+	}
 	else { rGrabberMotor.rotate(40, GRABBER_MOTORS_POWER); }
 
 	RubbishType rubbish = RubbishType::Bottle;
@@ -65,16 +84,21 @@ RubbishType Robot::grabAndIdentifyRubbish()
 		lGrabberMotor.stop(true);
 		int32_t sizeAngle = lGrabberMotor.getCounts();
 		lGrabberMotor.setPower(-10);
-		//bottles > 67 (70-95)
-		//cans > 27 (30-55)
-		//paper < 27 (10-20)
+		//bottles > 67
+		//cans > 34 old 27
+		//paper < 34
 		ev3::Console::write("%d", sizeAngle);
-		if (sizeAngle < 4) { rubbish = RubbishType::Bottle; break; } //bottle dropped and rolled away
-		if (sizeAngle < 27) { rubbish = RubbishType::Paper; break; }
-		if (sizeAngle < 67) { rubbish = RubbishType::Can; break; }
+		if (sizeAngle < 4) { rubbish = RubbishType::Bottle; ev3::Console::write("empty"); break; } //bottle dropped and rolled away
+		if (sizeAngle < 34) { rubbish = RubbishType::Paper; ev3::Console::write("paper"); break; }
+		if (sizeAngle < 67) { rubbish = RubbishType::Can; ev3::Console::write("can"); break; }
 
 		if (i == 0) 
 		{ 
+			lMotor.setPower(-DEFAULT_SPEED);
+			rMotor.setPower(-DEFAULT_SPEED);
+			while (lMotor.getCounts() > 0);
+			lMotor.setPower(15);
+			rMotor.setPower(15);
 			lGrabberMotor.rotate(150 - lGrabberMotor.getCounts(), GRABBER_MOTORS_POWER);
 			ev3::Time::delay(300);
 		}
@@ -82,20 +106,21 @@ RubbishType Robot::grabAndIdentifyRubbish()
 
 	lMotor.stop(true); 
 	rMotor.stop(true);
+
+	if (countsOut != nullptr) { *countsOut += lMotor.getCounts(); }
+
 	return rubbish;
 }
 
 void Robot::placeRubbish()
 {
-	lMotor.setPower(-10);
-	rMotor.setPower(-10);
-	lGrabberMotor.rotate(180 - lGrabberMotor.getCounts(), GRABBER_MOTORS_POWER);
+	lGrabberMotor.rotate(LEFT_GRABBER_MOTOR_OPEN_ANGLE - lGrabberMotor.getCounts(), GRABBER_MOTORS_POWER);
 	rGrabberMotor.setPower(GRABBER_MOTORS_POWER);
 	ev3::Time::delay(500);
-	lMotor.stop(true);
-	rMotor.stop(true);
 	while (rColorSensor.getColor() != ev3::ColorDef::Yellow) { ev3::Time::delay(1); }
 	rGrabberMotor.rotate(-105, GRABBER_MOTORS_POWER);
+	driveForMotorCounts(360);
+	driveForMotorCounts(-360);
 }
 
 void Robot::emergencyStop()
@@ -123,7 +148,8 @@ void Robot::turnToDirection(ev3::Vector2c direction)
 	if (direction.x == 0 && direction.y == 1) { angle = 0; }
 	else if (direction.x == 1 && direction.y == 0) { angle = 90; }
 	else if (direction.x == 0 && direction.y == -1) { angle = 180; }
-	else { angle = -90; } // (direction.x == -1 && direction.y == 0)
+	else if (direction.x == -1 && direction.y == 0) { angle = -90; }
+	else { return; }
 
 	currentDirection = direction;
 
@@ -136,6 +162,7 @@ void Robot::turnToAngle(int16_t angle)
 	int16_t delta = angle - directionAngle;
 	if (delta < -180) { delta += 360; }
 	if (delta > 180) { delta -= 360; }
+	//ev3::Console::write("a %d", delta);
 	directionAngle = angle;
 	driver.setSpeed(0);
 	if (std::abs(delta) == 180)
@@ -154,14 +181,16 @@ void Robot::turnToAngle(int16_t angle)
 		}
 
 		while (clock.getElapsedTime() < NINETY_DEGREE_TURN_TIME / 2);
-		while (clock.getElapsedTime() < NINETY_DEGREE_TURN_TIME * 2) { driver.drive(); }
+		while (clock.getElapsedTime() < NINETY_DEGREE_TURN_TIME * 2 + TURN_BALANCE_TIME) { driver.drive(); }
 	}
 	else
 	{
 		totalAngle += delta;
-		unsigned long turnTime = NINETY_DEGREE_TURN_TIME * delta / 90;
+		unsigned long turnTime = NINETY_DEGREE_TURN_TIME * std::abs(delta) / 90 + TURN_BALANCE_TIME;
 		while (clock.getElapsedTime() < turnTime) { driver.drive(); }
 	}
+
+	driver.stop();
 
 	ev3::LCD::clear();
 	char num[5];
@@ -169,7 +198,7 @@ void Robot::turnToAngle(int16_t angle)
 	ev3::LCD::drawString(num, 50, 20);
 }
 
-void Robot::driveForMotorCounts(int counts)
+void Robot::driveForMotorCounts(int32_t counts)
 {
 	lMotor.resetCounts();
 	if (counts > 0)
@@ -182,32 +211,98 @@ void Robot::driveForMotorCounts(int counts)
 		driver.setSpeed(-DEFAULT_SPEED);
 		while (lMotor.getCounts() > counts) { driver.drive(); }
 	}
+	driver.stop();
 }
 
-void Robot::driveOneCellForward(bool driveToCenter)
+void Robot::driveToLine()
 {
 	driver.setSpeed(DEFAULT_SPEED);
 	while (rColorSensor.getColor() != ev3::ColorDef::Black) { driver.drive(); }
-	if (driveToCenter) { driveForMotorCounts(DRIVE_TO_CENTER_COUNTS); }
+	driver.stop();
+}
+
+void Robot::driveOneCellForward(int32_t additionalCounts)
+{
+	driveToLine();
+	driveForMotorCounts(additionalCounts);
 	position += currentDirection;
 }
 
-void Robot::followPath(ev3::Vector2c* begin, ev3::Vector2c* end, bool driveToLastCellCenter)
+void Robot::driveAroundForward(bool right)
 {
-	if (begin == end) { return; }
-	end--;
-	for (; begin != end; begin++)
+	if (right)
 	{
-		ev3::Vector2c direction = *(begin + 1) - *begin;
-		turnToDirection(direction);
-		driveOneCellForward((begin != end - 1) || driveToLastCellCenter);
+		turnToAngle(directionAngle + 45);
+		driveForMotorCounts(180);
+		driveToLine();
+		driveForMotorCounts(270);
+		turnToAngle(directionAngle - 90);
+		driveForMotorCounts(180);
+		driveToLine();
+		driveForMotorCounts(270);
+		turnToAngle(directionAngle + 45);
+	}
+	else
+	{
+		turnToAngle(directionAngle - 45);
+		driveToLine();
+		turnToAngle(directionAngle + 90);
+		driveToLine();
+		turnToAngle(directionAngle - 45);
 	}
 	driver.stop();
+	position += currentDirection;
+}
+
+void Robot::driveAroundTurnLeft()
+{
+	currentDirection = turnLeft(currentDirection);
+	position += currentDirection;
+
+	turnToAngle(directionAngle - 45);
+	driveToLine();
+	turnToAngle(directionAngle - 45);
+	driver.stop();
+}
+
+void Robot::driveAroundTurnRight()
+{
+	currentDirection = turnRight(currentDirection);
+	position += currentDirection;
+
+	turnToAngle(directionAngle + 45);
+	driveForMotorCounts(180);
+	driveToLine();
+	driveForMotorCounts(270);
+	turnToAngle(directionAngle + 45);
+	driver.stop();
+}
+
+bool Robot::checkWall()
+{
+	auto d = wallDistanceSensor.getDistance();
+	if (d == 0) { ev3::Speaker::playTone(ev3::Note::A4, 50); }
+	return d < WALL_DISTANCE;
 }
 
 void Robot::stop()
 {
 	driver.stop();
+}
+
+ev3::Vector2c Robot::getPosition() const
+{
+	return position;
+}
+
+void Robot::setPosition(ev3::Vector2c pos)
+{
+	position = pos;
+}
+
+ev3::Vector2c Robot::getDirection() const
+{
+	return currentDirection;
 }
 
 uint16_t Robot::getDistFilterZero()

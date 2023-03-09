@@ -4,7 +4,7 @@
 
 #define GRABBER_MOTORS_POWER 40
 #define LEFT_GRABBER_MOTOR_OPEN_ANGLE 180
-#define RIGHT_GRABBER_MOTOR_OPEN_ANGLE -140
+#define RIGHT_GRABBER_MOTOR_OPEN_ANGLE (-140)
 #define DEFAULT_SPEED 30
 #define TURN_SPEED 20
 #define OBJECT_DISTANCE 20
@@ -47,7 +47,7 @@ private:
 	ev3::Motor lGrabberMotor;
 	ev3::Motor rGrabberMotor;
 	ev3::UltrasonicSensor distanceSensor;
-	ev3::UltrasonicSensor wallDistanceSensor;
+	ev3::IRSensor wallDistanceSensor;
 	ev3::ColorSensor rColorSensor;
 	ev3::GyroSensor gyroSensor;
 	int16_t directionAngle;

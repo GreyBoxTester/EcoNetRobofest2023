@@ -1,5 +1,6 @@
 #pragma once
 #include "Vector2.hpp"
+#include "Console.hpp"
 #include <cstdint>
 #include <utility>
 
@@ -29,6 +30,7 @@ public:
 	Cell& at(ev3::Vector2c pos);
 	const Cell& at(uint8_t x, uint8_t y) const;
 	const Cell& at(ev3::Vector2c pos) const;
+	void print();
 public:
 	static constexpr uint8_t sizeX = 5;
 	static constexpr uint8_t sizeY = 3;

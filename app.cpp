@@ -4,7 +4,6 @@
 void mainTask(intptr_t unused)
 {
 	Application app;
-	app.sortFirstThree();
-	//app.goTo(Field::Cell::Type::PaperStorage, false);
-	//robot.grabAndIdentifyRubbish();
+	app.sortRubbish();
+	app.goToFinish();
 }

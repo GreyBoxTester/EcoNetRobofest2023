@@ -44,7 +44,7 @@ Field::Field()
 		at(x, 2).type = Cell::Type::Rubbish;
 	}
 	at(0, 1).type = at(4, 1).type = Cell::Type::Rubbish;
-	at(1, 1).type = at(2, 1).type = at(3, 1).type = Cell::Type::InterferingRubbish;
+	//at(1, 1).type = at(2, 1).type = at(3, 1).type = Cell::Type::InterferingRubbish;
 }
 
 void Field::flipBottomLine()
@@ -90,4 +90,14 @@ const Field::Cell& Field::at(uint8_t x, uint8_t y) const
 const Field::Cell& Field::at(ev3::Vector2c pos) const
 {
 	return field[pos.y * sizeX + pos.x];
+}
+
+void Field::print()
+{
+	ev3::Console::write("=====");
+	for (uint8_t x = 0; x < sizeX; x++)
+	{
+		ev3::Console::write("%d %d %d", at(x, 0).type, at(x, 1).type, at(x, 2).type);
+	}
+	ev3::Console::write("=====");
 }

@@ -16,8 +16,8 @@ Robot::Robot()
 	  position(0, 0),
 	  driver(gyroSensor, directionAngle, Robot::diffFunc, lMotor, rMotor)
 {
-	while (!(distanceSensor.ready() && rColorSensor.ready() && gyroSensor.ready())) { ev3::Time::delay(10); }
-	driver.setCoefficents(1.1f, 0.4f);
+	while (!(distanceSensor.ready() && wallDistanceSensor.ready() && rColorSensor.ready() && gyroSensor.ready())) { ev3::Time::delay(10); }
+	driver.setCoefficents(1.0f, 0.4f);
 }
 
 void Robot::openGrabbers()
@@ -280,9 +280,15 @@ void Robot::driveAroundTurnRight()
 
 bool Robot::checkWall()
 {
-	auto d = wallDistanceSensor.getDistance();
-	if (d == 0) { ev3::Speaker::playTone(ev3::Note::A4, 50); }
-	return d < WALL_DISTANCE;
+	uint16_t dist = 0;
+	for (int i = 0; i < 20; i++)
+	{
+		dist += wallDistanceSensor.getDistance();
+		ev3::Time::delay(5);
+	}
+	dist /= 20;
+	ev3::Console::write("wall: %d", dist);
+	return dist < WALL_DISTANCE;
 }
 
 void Robot::stop()

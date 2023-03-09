@@ -2,7 +2,7 @@
 
 Application::Application() 
 {
-	//field.at(0, 1).type = field.at(1, 1).type = field.at(0, 2).type = field.at(1, 2).type = Field::Cell::Type::Empty;
+	//field.at(1, 1).type = field.at(2, 1).type = field.at(3, 1).type = Field::Cell::Type::Empty;
 }
 
 void Application::sortFirstThree()
@@ -30,6 +30,33 @@ void Application::sortFirstThree()
 
 void Application::sortRubbish()
 {
+	robot.openGrabbers();
+	Path path;
+	for (int rubbishLeft = 7; rubbishLeft > 0; rubbishLeft--)
+	{
+		field.print();
+		goTo(Field::Cell::Type::Rubbish, false);
+
+		int32_t movedBy = 0;
+		auto destination = getDestinationCellType(robot.grabAndIdentifyRubbish(&movedBy));
+		robot.driveForMotorCounts(DRIVE_TO_CENTER_COUNTS - movedBy);
+		field.at(robot.getPosition()).type = Field::Cell::Type::Empty;
+
+		ev3::Console::write("u:%d d:%d l:%d r:%d", field.at(robot.getPosition()).topBorder, field.at(robot.getPosition()).bottomBorder, field.at(robot.getPosition()).leftBorder, field.at(robot.getPosition()).rightBorder);
+		field.print();
+		goTo(destination, false);
+
+		robot.placeRubbish();
+		robot.turnToDirection({ 0, 1 });
+		robot.driveForMotorCounts(DRIVE_TO_CENTER_COUNTS - DRIVE_TO_LINE_COUNTS * 2);
+		robot.setPosition(robot.getPosition() + robot.getDirection());
+	}
+}
+
+void Application::goToFinish()
+{
+	robot.closeGrabbers();
+	goTo(Field::Cell::Type::Start, true);
 }
 
 void Application::goTo(Field::Cell::Type destination, bool driveToLastCellCenter)
@@ -38,7 +65,9 @@ void Application::goTo(Field::Cell::Type destination, bool driveToLastCellCenter
 	Path path;
 	while (!reachedDestination)
 	{
+		ev3::Console::write("start: %d %d", robot.getPosition().x, robot.getPosition().y);
 		pathGen.generatePath(field, robot.getPosition(), destination, false, &path);
+		printPath(path);
 		for (size_t i = 0; i < path.size() - 1; i++)
 		{
 			ev3::Vector2c direction = path[i + 1] - path[i];

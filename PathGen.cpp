@@ -1,7 +1,7 @@
 #include "PathGen.h"
 
 PathGen::PathGen()
-	: bestPathPtr(nullptr), ignoreRubbish(false), direction(0, 0), destination(Field::Cell::Type::Empty)
+	: bestPathPtr(nullptr), foundPath(false), ignoreRubbish(false), direction(0, 0), destination(Field::Cell::Type::Empty)
 {}
 
 void PathGen::generatePath(const Field& field, ev3::Vector2c start, Field::Cell::Type end, bool ignoreRubbish, Path* bestPathOut)
@@ -15,6 +15,7 @@ void PathGen::generatePath(const Field& field, ev3::Vector2c start, Field::Cell:
 
 	bestPathOut->resize(bestPathOut->capacity());
 	bestPathPtr = bestPathOut;
+	foundPath = false;
 	this->ignoreRubbish = ignoreRubbish;
 	destination = end;
 
@@ -32,20 +33,24 @@ void PathGen::generatePath(const Field& field, ev3::Vector2c start, Field::Cell:
 		}
 		direction = turnRight(direction);
 	}
+
+	if (!foundPath) { bestPathPtr->clear(); }
 }
 
 void PathGen::generatePath(const Field& field, Path& path)
 {
+	//ev3::Console::write("d: %d", path.size());
 	ev3::Vector2c currentPos = path.back();
 	if (path.size() >= bestPathPtr->size()) { return; }
 	//if (currentPos.x < 0 || currentPos.x >= Field::sizeX || currentPos.y < 0 || currentPos.y >= Field::sizeY) { return; }
 	if (field.at(currentPos).type == destination)
 	{
+		foundPath = true;
 		*bestPathPtr = path;
 		return;
 	}
 	if (!ignoreRubbish && field.at(currentPos).type == Field::Cell::Type::Rubbish) { return; }
-	if (currentPos == path[path.size() - 5]) { return; }
+	if (path.size() >= 5) { if (currentPos == path[path.size() - 5]) { return; } }
 
 	if (field.at(currentPos).canGoInDirection(direction))
 	{

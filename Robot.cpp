@@ -7,16 +7,18 @@ Robot::Robot()
 	  rGrabberMotor(ev3::MotorPort::D, ev3::MotorType::Unregulated, false),
 	  //lColorSensor(ev3::SensorPort::S2),
 	  distanceSensor(ev3::SensorPort::S1),
-	  wallDistanceSensor(ev3::SensorPort::S2),
+	  borderDistanceSensor(ev3::SensorPort::S2),
 	  rColorSensor(ev3::SensorPort::S3),
 	  gyroSensor(ev3::SensorPort::S4),
 	  directionAngle(0),
 	  totalAngle(0),
+	  correctionAngle(0),
+	  turnCount(0),
 	  currentDirection(0, 1),
 	  position(0, 0),
-	  driver(gyroSensor, directionAngle, Robot::diffFunc, lMotor, rMotor)
+	  driver(gyroSensor, directionAngle, correctionAngle, Robot::diffFunc, lMotor, rMotor)
 {
-	while (!(distanceSensor.ready() && wallDistanceSensor.ready() && rColorSensor.ready() && gyroSensor.ready())) { ev3::Time::delay(10); }
+	while (!(distanceSensor.ready() && borderDistanceSensor.ready() && rColorSensor.ready() && gyroSensor.ready())) { ev3::Time::delay(10); }
 	driver.setCoefficents(1.0f, 0.4f);
 }
 
@@ -37,20 +39,25 @@ RubbishType Robot::grabAndIdentifyRubbish(int32_t* countsOut)
 	lMotor.resetCounts();
 	lMotor.setPower(DEFAULT_SPEED);
 	rMotor.setPower(DEFAULT_SPEED);
-	while (getDistFilterZero() > OBJECT_DISTANCE) { ev3::Time::delay(1); }
-	if (countsOut != nullptr) { *countsOut = lMotor.getCounts(); }
-	lMotor.resetCounts();
+	while (getDistFilterZero() > OBJECT_DISTANCE) 
+	{ 
+		ev3::Time::delay(1); 
+		if (borderDistanceSensor.getDistance() < MINIMAL_BORDER_DISTANCE || lMotor.getCounts() > (DRIVE_TO_CENTER_COUNTS - DRIVE_TO_LINE_COUNTS) * 2) { lMotor.stop(true); rMotor.stop(true); break; }
+	}
+	//if (countsOut != nullptr) { *countsOut = lMotor.getCounts(); }
+	//lMotor.resetCounts();
 	lMotor.setPower(15);
 	rMotor.setPower(15);
 
 	rGrabberMotor.resetCounts();
 	rGrabberMotor.setPower(-GRABBER_MOTORS_POWER);
-
+	
 	int8_t speed = 0;
 	ev3::ColorDef color;
 	do
 	{
 		ev3::Time::delay(1);
+		if (borderDistanceSensor.getDistance() < MINIMAL_BORDER_DISTANCE || lMotor.getCounts() > (DRIVE_TO_CENTER_COUNTS - DRIVE_TO_LINE_COUNTS) * 2) { lMotor.stop(true); rMotor.stop(true); }
 		speed = rGrabberMotor.getSpeed();
 		color = rColorSensor.getColor();
 	} while (!(speed < -6 && color != ev3::ColorDef::Yellow));
@@ -58,6 +65,7 @@ RubbishType Robot::grabAndIdentifyRubbish(int32_t* countsOut)
 	while (speed < -4 && color != ev3::ColorDef::Yellow)
 	{
 		ev3::Time::delay(1);
+		if (borderDistanceSensor.getDistance() < MINIMAL_BORDER_DISTANCE || lMotor.getCounts() > (DRIVE_TO_CENTER_COUNTS - DRIVE_TO_LINE_COUNTS) * 2) { lMotor.stop(true); rMotor.stop(true); }
 		speed = rGrabberMotor.getSpeed();
 		color = rColorSensor.getColor();
 	}
@@ -71,6 +79,8 @@ RubbishType Robot::grabAndIdentifyRubbish(int32_t* countsOut)
 		rGrabberMotor.rotate(-rGrabberMotor.getCounts() - RIGHT_GRABBER_MOTOR_OPEN_ANGLE, GRABBER_MOTORS_POWER);
 	}
 	else { rGrabberMotor.rotate(40, GRABBER_MOTORS_POWER); }
+
+	if (borderDistanceSensor.getDistance() < MINIMAL_BORDER_DISTANCE || lMotor.getCounts() > (DRIVE_TO_CENTER_COUNTS - DRIVE_TO_LINE_COUNTS) * 2) { lMotor.stop(true); rMotor.stop(true); }
 
 	RubbishType rubbish = RubbishType::Bottle;
 
@@ -88,7 +98,7 @@ RubbishType Robot::grabAndIdentifyRubbish(int32_t* countsOut)
 		//cans > 34 old 27
 		//paper < 34
 		ev3::Console::write("%d", sizeAngle);
-		if (sizeAngle < 4) { rubbish = RubbishType::Bottle; ev3::Console::write("empty"); break; } //bottle dropped and rolled away
+		if (sizeAngle < 4) { rubbish = RubbishType::None; ev3::Console::write("empty"); break; }
 		if (sizeAngle < 34) { rubbish = RubbishType::Paper; ev3::Console::write("paper"); break; }
 		if (sizeAngle < 67) { rubbish = RubbishType::Can; ev3::Console::write("can"); break; }
 
@@ -96,7 +106,7 @@ RubbishType Robot::grabAndIdentifyRubbish(int32_t* countsOut)
 		{ 
 			lMotor.setPower(-DEFAULT_SPEED);
 			rMotor.setPower(-DEFAULT_SPEED);
-			while (lMotor.getCounts() > 0);
+			while (lMotor.getCounts() > DRIVE_TO_LINE_COUNTS);
 			lMotor.setPower(15);
 			rMotor.setPower(15);
 			lGrabberMotor.rotate(150 - lGrabberMotor.getCounts(), GRABBER_MOTORS_POWER);
@@ -107,18 +117,19 @@ RubbishType Robot::grabAndIdentifyRubbish(int32_t* countsOut)
 	lMotor.stop(true); 
 	rMotor.stop(true);
 
-	if (countsOut != nullptr) { *countsOut += lMotor.getCounts(); }
+	if (countsOut != nullptr) { *countsOut = lMotor.getCounts(); }
 
 	return rubbish;
 }
 
 void Robot::placeRubbish()
 {
-	lGrabberMotor.rotate(LEFT_GRABBER_MOTOR_OPEN_ANGLE - lGrabberMotor.getCounts(), GRABBER_MOTORS_POWER);
+	/*lGrabberMotor.rotate(LEFT_GRABBER_MOTOR_OPEN_ANGLE - lGrabberMotor.getCounts(), GRABBER_MOTORS_POWER);
 	rGrabberMotor.setPower(GRABBER_MOTORS_POWER);
 	ev3::Time::delay(500);
 	while (rColorSensor.getColor() != ev3::ColorDef::Yellow) { ev3::Time::delay(1); }
-	rGrabberMotor.rotate(-105, GRABBER_MOTORS_POWER);
+	rGrabberMotor.rotate(-105, GRABBER_MOTORS_POWER);*/
+	openGrabbers();
 	driveForMotorCounts(360);
 	driveForMotorCounts(-360);
 }
@@ -158,6 +169,8 @@ void Robot::turnToDirection(ev3::Vector2c direction)
 
 void Robot::turnToAngle(int16_t angle)
 {
+	turnCount++;
+	correctionAngle = turnCount * 7 / 20;
 	ev3::Time::Clock clock;
 	int16_t delta = angle - directionAngle;
 	if (delta < -180) { delta += 360; }
@@ -192,10 +205,7 @@ void Robot::turnToAngle(int16_t angle)
 
 	driver.stop();
 
-	ev3::LCD::clear();
-	char num[5];
-	itoa(totalAngle, num, 10);
-	ev3::LCD::drawString(num, 50, 20);
+	ev3::Console::write("total: %d turnCount: %d correction: %d", totalAngle, turnCount, correctionAngle);
 }
 
 void Robot::driveForMotorCounts(int32_t counts)
@@ -278,23 +288,45 @@ void Robot::driveAroundTurnRight()
 	driver.stop();
 }
 
-bool Robot::checkWall()
+bool Robot::checkBorder()
 {
-	uint16_t dist = 0;
+	/*uint16_t dist = 0; 
 	for (int i = 0; i < 20; i++)
 	{
-		dist += wallDistanceSensor.getDistance();
+		dist += borderDistanceSensor.getDistance();
 		ev3::Time::delay(5);
 	}
-	dist /= 20;
-	ev3::Console::write("wall: %d", dist);
-	return dist < WALL_DISTANCE;
+
+	dist /= 20;*/
+	uint16_t dist = borderDistanceSensor.getDistance();
+	ev3::Console::write("border: %d", dist);
+	return dist < BORDER_DISTANCE;
 }
 
 void Robot::stop()
 {
 	driver.stop();
 }
+
+/*void Robot::calibrateGyroSensor()
+{
+	lMotor.setPower(15);
+	rMotor.setPower(15);
+	ev3::Time::delay(3000);
+	lMotor.stop(false);
+	rMotor.stop(false);
+	ev3::Time::delay(200);
+	int16_t delta = gyroSensor.getAngle() - totalAngle;
+	ev3::Console::write("delta: %d", delta);
+	lMotor.setPower(-15);
+	rMotor.setPower(-15);
+	ev3::Time::delay(500);
+	turnToAngle(delta);
+	driveForMotorCounts(-200);
+	ev3::Time::delay(500);
+	gyroSensor.reset();
+	ev3::Time::delay(500);
+}*/
 
 ev3::Vector2c Robot::getPosition() const
 {
@@ -311,6 +343,11 @@ ev3::Vector2c Robot::getDirection() const
 	return currentDirection;
 }
 
+void Robot::setCorrectionAngle(int16_t angle)
+{
+	correctionAngle = angle;
+}
+
 uint16_t Robot::getDistFilterZero()
 {
 	uint16_t dist = 0;
@@ -318,9 +355,9 @@ uint16_t Robot::getDistFilterZero()
 	return dist;
 }
 
-float Robot::diffFunc(ev3::Tuple<ev3::GyroSensor*, int16_t*>& sensors)
+float Robot::diffFunc(ev3::Tuple<ev3::GyroSensor*, int16_t*, int16_t*>& sensors)
 {
-	int16_t angle = (*sensors.getRest().current - sensors.current->getAngle()) % 360;
+	int16_t angle = (*sensors.get<1>() - sensors.get<0>()->getAngle() + *sensors.get<2>()) % 360;
 	if (angle < 0) { angle += 360; }
 	if (angle > 180) { angle -= 360; }
 

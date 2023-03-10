@@ -1,8 +1,16 @@
 #include "Application.h"
 
-Application::Application() 
+Application::Application() {}
+
+void Application::identifyFieldSide()
 {
-	//field.at(1, 1).type = field.at(2, 1).type = field.at(3, 1).type = Field::Cell::Type::Empty;
+	robot.turnToDirection({ 1, 0 });
+	if (!robot.checkBorder()) 
+	{ 
+		robot.setPosition({ 4, 0 });
+		field.flipBottomLine(); 
+	}
+	robot.turnToDirection({ 0, 1 });
 }
 
 void Application::sortFirstThree()
@@ -14,11 +22,15 @@ void Application::sortFirstThree()
 
 		robot.openGrabbers();
 		int32_t movedBy = 0;
-		auto destination = getDestinationCellType(robot.grabAndIdentifyRubbish(&movedBy));
+		RubbishType rubbish = robot.grabAndIdentifyRubbish(&movedBy);
 		field.at(robot.getPosition()).type = Field::Cell::Type::Empty;
 		robot.driveForMotorCounts((DRIVE_TO_CENTER_COUNTS - DRIVE_TO_LINE_COUNTS) - movedBy);
+		if (rubbish == RubbishType::None)
+		{
+			continue;
+		}
 
-		goToZigZag(destination, true);
+		goToZigZag(getDestinationCellType(rubbish), true);
 
 		robot.placeRubbish();
 		robot.closeGrabbers();
@@ -31,20 +43,29 @@ void Application::sortFirstThree()
 void Application::sortRubbish()
 {
 	robot.openGrabbers();
-	Path path;
 	for (int rubbishLeft = 7; rubbishLeft > 0; rubbishLeft--)
 	{
 		field.print();
 		goTo(Field::Cell::Type::Rubbish, false);
-
 		int32_t movedBy = 0;
-		auto destination = getDestinationCellType(robot.grabAndIdentifyRubbish(&movedBy));
+		RubbishType rubbish = robot.grabAndIdentifyRubbish(&movedBy);
 		robot.driveForMotorCounts(DRIVE_TO_CENTER_COUNTS - movedBy);
 		field.at(robot.getPosition()).type = Field::Cell::Type::Empty;
+		if (rubbish == RubbishType::None) 
+		{
+			robot.openGrabbers();
+			continue; 
+		}
 
-		ev3::Console::write("u:%d d:%d l:%d r:%d", field.at(robot.getPosition()).topBorder, field.at(robot.getPosition()).bottomBorder, field.at(robot.getPosition()).leftBorder, field.at(robot.getPosition()).rightBorder);
+		ev3::Console::write(
+			"u:%d d:%d l:%d r:%d", 
+			field.at(robot.getPosition()).topBorder, 
+			field.at(robot.getPosition()).bottomBorder, 
+			field.at(robot.getPosition()).leftBorder, 
+			field.at(robot.getPosition()).rightBorder
+		);
 		field.print();
-		goTo(destination, false);
+		goTo(getDestinationCellType(rubbish), false);
 
 		robot.placeRubbish();
 		robot.turnToDirection({ 0, 1 });
@@ -66,17 +87,34 @@ void Application::goTo(Field::Cell::Type destination, bool driveToLastCellCenter
 	while (!reachedDestination)
 	{
 		ev3::Console::write("start: %d %d", robot.getPosition().x, robot.getPosition().y);
-		pathGen.generatePath(field, robot.getPosition(), destination, false, &path);
+		pathGen.generatePath(field, robot.getPosition(), robot.getDirection(), destination, false, &path);
 		printPath(path);
+		if (path.size() == 0)
+		{
+			field.removeBorders();
+			ev3::Console::write("!!!BORDER RESET!!!");
+			continue;
+		}
+
 		for (size_t i = 0; i < path.size() - 1; i++)
 		{
 			ev3::Vector2c direction = path[i + 1] - path[i];
+			
+			if (!(robot.getPosition().y == 1 && robot.getDirection() != ev3::Vector2c(0, 1)))
+			{
+				if (robot.checkBorder()) { field.addBorder(robot.getPosition(), robot.getDirection()); }
+			}
+
 			robot.turnToDirection(direction);
-			if (robot.checkWall()) { field.addBorder(robot.getPosition(), robot.getDirection()); break; }
+			
+			if (!(robot.getPosition().y == 1 && robot.getDirection() != ev3::Vector2c(0, 1)))
+			{
+				if (robot.checkBorder()) { field.addBorder(robot.getPosition(), robot.getDirection()); break; }
+			}
+
 			if (i < path.size() - 2)
 			{
 				robot.driveOneCellForward();
-				if (robot.checkWall()) { field.addBorder(robot.getPosition(), robot.getDirection()); break; }
 			}
 			else
 			{
@@ -90,7 +128,7 @@ void Application::goTo(Field::Cell::Type destination, bool driveToLastCellCenter
 void Application::goToZigZag(Field::Cell::Type destination, bool startInCenter)
 {
 	Path path;
-	pathGen.generatePath(field, robot.getPosition(), destination, true, &path);
+	pathGen.generatePath(field, robot.getPosition(), robot.getDirection(), destination, true, &path);
 	for (size_t i = 0; i < path.size() - 1; i++)
 	{
 		ev3::Vector2c direction = path[i + 1] - path[i];
@@ -122,6 +160,6 @@ Field::Cell::Type Application::getDestinationCellType(RubbishType rubbish)
 	case RubbishType::Paper: return Field::Cell::Type::PaperStorage;
 	case RubbishType::Can: return Field::Cell::Type::CanStorage;
 	case RubbishType::Bottle: return Field::Cell::Type::BottleStorage;
+	default: return Field::Cell::Type::Empty;
 	}
-	return Field::Cell::Type::Empty;
 }

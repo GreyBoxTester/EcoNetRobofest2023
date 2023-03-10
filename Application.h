@@ -7,6 +7,7 @@ class Application : NonCopyable
 {
 public:
 	Application();
+	void identifyFieldSide();
 	void sortFirstThree();
 	void sortRubbish();
 	void goToFinish();

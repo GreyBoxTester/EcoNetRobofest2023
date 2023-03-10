@@ -8,7 +8,7 @@ class PathGen
 {
 public:
 	PathGen();
-	void generatePath(const Field& field, ev3::Vector2c start, Field::Cell::Type end, bool ignoreRubbish, Path* bestPathOut);
+	void generatePath(const Field& field, ev3::Vector2c start, ev3::Vector2c dir, Field::Cell::Type end, bool ignoreRubbish, Path* bestPathOut);
 private:
 	void generatePath(const Field& field, Path& path);
 private:

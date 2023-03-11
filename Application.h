@@ -7,6 +7,7 @@ class Application : NonCopyable
 {
 public:
 	Application();
+	void waitInit() const;
 	void identifyFieldSide();
 	void sortFirstThree();
 	void sortRubbish();
@@ -14,8 +15,10 @@ public:
 	void goTo(Field::Cell::Type destination, bool driveToLastCellCenter, bool openGrabbers);
 	void goToZigZag(Field::Cell::Type destination, bool startInCenter);
 	Field::Cell::Type getDestinationCellType(RubbishType rubbish);
+	static void emergencyButtonHandler(intptr_t obj);
 private:
 	Robot robot;
 	Field field;
 	PathGen pathGen;
+	bool initialized = false;
 };

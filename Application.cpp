@@ -1,6 +1,15 @@
 #include "Application.h"
 
-Application::Application() {}
+Application::Application() 
+{
+	ev3::Brick::setButtonHandler(ev3::BrickButton::Down, emergencyButtonHandler, (intptr_t)this);
+	initialized = true;
+}
+
+void Application::waitInit() const
+{
+	while (!initialized) { ev3::Time::delay(10); }
+}
 
 void Application::identifyFieldSide()
 {
@@ -25,10 +34,7 @@ void Application::sortFirstThree()
 		RubbishType rubbish = robot.grabAndIdentifyRubbish(&movedBy);
 		field.at(robot.getPosition()).type = Field::Cell::Type::Empty;
 		robot.driveForMotorCounts((DRIVE_TO_CENTER_COUNTS - DRIVE_TO_LINE_COUNTS) - movedBy);
-		if (rubbish == RubbishType::None)
-		{
-			continue;
-		}
+		if (rubbish == RubbishType::None) { continue; }
 
 		goToZigZag(getDestinationCellType(rubbish), true);
 
@@ -43,7 +49,6 @@ void Application::sortFirstThree()
 
 void Application::sortRubbish()
 {
-	//robot.openGrabbers();
 	for (int rubbishLeft = 7; rubbishLeft > 0; rubbishLeft--)
 	{
 		field.print();
@@ -52,11 +57,7 @@ void Application::sortRubbish()
 		RubbishType rubbish = robot.grabAndIdentifyRubbish(&movedBy);
 		robot.driveForMotorCounts(DRIVE_TO_CENTER_COUNTS - movedBy);
 		field.at(robot.getPosition()).type = Field::Cell::Type::Empty;
-		if (rubbish == RubbishType::None) 
-		{
-			//robot.openGrabbers();
-			continue; 
-		}
+		if (rubbish == RubbishType::None) { continue; }
 
 		ev3::Console::write(
 			"u:%d d:%d l:%d r:%d", 
@@ -79,7 +80,6 @@ void Application::sortRubbish()
 
 void Application::goToFinish()
 {
-	//robot.closeGrabbers();
 	goTo(Field::Cell::Type::Start, true, false);
 }
 
@@ -166,4 +166,11 @@ Field::Cell::Type Application::getDestinationCellType(RubbishType rubbish)
 	case RubbishType::Bottle: return Field::Cell::Type::BottleStorage;
 	default: return Field::Cell::Type::Empty;
 	}
+}
+
+void Application::emergencyButtonHandler(intptr_t obj)
+{
+	ter_tsk(MAIN_TASK);
+	((Application*)obj)->robot.emergencyStop();
+	ev3::Brick::setButtonHandler(ev3::BrickButton::Down, nullptr, 0);
 }

@@ -22,8 +22,8 @@ class Robot : NonCopyable
 {
 public:
 	Robot();
-	void openGrabbers();
-	void closeGrabbers();
+	void openGrabbers(bool wait = true);
+	void closeGrabbers(bool wait = true);
 	RubbishType grabAndIdentifyRubbish(int32_t* countsOut = nullptr);
 	void placeRubbish();
 	void emergencyStop();

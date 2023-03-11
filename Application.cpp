@@ -32,8 +32,9 @@ void Application::sortFirstThree()
 
 		goToZigZag(getDestinationCellType(rubbish), true);
 
+		robot.openGrabbers(false);
 		robot.placeRubbish();
-		robot.closeGrabbers();
+		robot.closeGrabbers(false);
 		robot.turnToDirection({ 0, 1 });
 		robot.setPosition(robot.getPosition() + robot.getDirection());
 	}
@@ -42,18 +43,18 @@ void Application::sortFirstThree()
 
 void Application::sortRubbish()
 {
-	robot.openGrabbers();
+	//robot.openGrabbers();
 	for (int rubbishLeft = 7; rubbishLeft > 0; rubbishLeft--)
 	{
 		field.print();
-		goTo(Field::Cell::Type::Rubbish, false);
+		goTo(Field::Cell::Type::Rubbish, false, true);
 		int32_t movedBy = 0;
 		RubbishType rubbish = robot.grabAndIdentifyRubbish(&movedBy);
 		robot.driveForMotorCounts(DRIVE_TO_CENTER_COUNTS - movedBy);
 		field.at(robot.getPosition()).type = Field::Cell::Type::Empty;
 		if (rubbish == RubbishType::None) 
 		{
-			robot.openGrabbers();
+			//robot.openGrabbers();
 			continue; 
 		}
 
@@ -65,9 +66,11 @@ void Application::sortRubbish()
 			field.at(robot.getPosition()).rightBorder
 		);
 		field.print();
-		goTo(getDestinationCellType(rubbish), false);
+		goTo(getDestinationCellType(rubbish), false, false);
 
+		robot.openGrabbers(false);
 		robot.placeRubbish();
+		robot.closeGrabbers(false);
 		robot.turnToDirection({ 0, 1 });
 		robot.driveForMotorCounts(DRIVE_TO_CENTER_COUNTS - DRIVE_TO_LINE_COUNTS * 2);
 		robot.setPosition(robot.getPosition() + robot.getDirection());
@@ -76,11 +79,11 @@ void Application::sortRubbish()
 
 void Application::goToFinish()
 {
-	robot.closeGrabbers();
-	goTo(Field::Cell::Type::Start, true);
+	//robot.closeGrabbers();
+	goTo(Field::Cell::Type::Start, true, false);
 }
 
-void Application::goTo(Field::Cell::Type destination, bool driveToLastCellCenter)
+void Application::goTo(Field::Cell::Type destination, bool driveToLastCellCenter, bool openGrabbers)
 {
 	bool reachedDestination = false;
 	Path path;
@@ -118,6 +121,7 @@ void Application::goTo(Field::Cell::Type destination, bool driveToLastCellCenter
 			}
 			else
 			{
+				if (openGrabbers) { robot.openGrabbers(); }
 				robot.driveOneCellForward(driveToLastCellCenter ? DRIVE_TO_CENTER_COUNTS : 0);
 				reachedDestination = true;
 			}

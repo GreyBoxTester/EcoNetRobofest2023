@@ -22,16 +22,18 @@ Robot::Robot()
 	driver.setCoefficents(1.0f, 0.4f);
 }
 
-void Robot::openGrabbers()
+void Robot::openGrabbers(bool wait)
 {
-	lGrabberMotor.rotate(LEFT_GRABBER_MOTOR_OPEN_ANGLE - lGrabberMotor.getCounts(), GRABBER_MOTORS_POWER);
-	rGrabberMotor.rotate(RIGHT_GRABBER_MOTOR_OPEN_ANGLE, GRABBER_MOTORS_POWER);
+	lGrabberMotor.rotate(LEFT_GRABBER_MOTOR_OPEN_ANGLE - lGrabberMotor.getCounts(), GRABBER_MOTORS_POWER, false);
+	rGrabberMotor.rotate(RIGHT_GRABBER_MOTOR_OPEN_ANGLE, GRABBER_MOTORS_POWER, false);
+	if (wait) { ev3::Time::delay(700); }
 }
 
-void Robot::closeGrabbers()
+void Robot::closeGrabbers(bool wait)
 {
-	lGrabberMotor.rotate(30 - lGrabberMotor.getCounts(), GRABBER_MOTORS_POWER);
-	rGrabberMotor.rotate(-RIGHT_GRABBER_MOTOR_OPEN_ANGLE, GRABBER_MOTORS_POWER);
+	lGrabberMotor.rotate(30 - lGrabberMotor.getCounts(), GRABBER_MOTORS_POWER, false);
+	rGrabberMotor.rotate(-RIGHT_GRABBER_MOTOR_OPEN_ANGLE, GRABBER_MOTORS_POWER, false);
+	if (wait) { ev3::Time::delay(700); }
 }
 
 RubbishType Robot::grabAndIdentifyRubbish(int32_t* countsOut)
@@ -129,7 +131,7 @@ void Robot::placeRubbish()
 	ev3::Time::delay(500);
 	while (rColorSensor.getColor() != ev3::ColorDef::Yellow) { ev3::Time::delay(1); }
 	rGrabberMotor.rotate(-105, GRABBER_MOTORS_POWER);*/
-	openGrabbers();
+	//openGrabbers();
 	driveForMotorCounts(360);
 	driveForMotorCounts(-360);
 }
@@ -170,7 +172,7 @@ void Robot::turnToDirection(ev3::Vector2c direction)
 void Robot::turnToAngle(int16_t angle)
 {
 	turnCount++;
-	correctionAngle = turnCount * 7 / 20;
+	correctionAngle = turnCount / 4;
 	ev3::Time::Clock clock;
 	int16_t delta = angle - directionAngle;
 	if (delta < -180) { delta += 360; }

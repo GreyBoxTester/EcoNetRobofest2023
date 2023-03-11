@@ -290,7 +290,7 @@ void Robot::driveAroundTurnRight()
 	driver.stop();
 }
 
-bool Robot::checkBorder()
+bool Robot::checkBorder(bool onCenter)
 {
 	/*uint16_t dist = 0; 
 	for (int i = 0; i < 20; i++)
@@ -302,7 +302,7 @@ bool Robot::checkBorder()
 	dist /= 20;*/
 	uint16_t dist = borderDistanceSensor.getDistance();
 	ev3::Console::write("border: %d", dist);
-	return dist < BORDER_DISTANCE;
+	return dist < (onCenter ? BORDER_DISTANCE : BORDER_DISTANCE_FROM_LINE);
 }
 
 void Robot::stop()

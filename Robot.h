@@ -14,6 +14,7 @@
 #define NINETY_DEGREE_TURN_TIME 600
 #define TURN_BALANCE_TIME 700
 #define BORDER_DISTANCE 70 
+#define BORDER_DISTANCE_FROM_LINE 80
 #define MINIMAL_BORDER_DISTANCE 58
 
 enum class RubbishType : uint8_t { None, Paper, Can, Bottle };
@@ -35,7 +36,7 @@ public:
 	void driveAroundForward(bool right);
 	void driveAroundTurnLeft();
 	void driveAroundTurnRight();
-	bool checkBorder();
+	bool checkBorder(bool onCenter);
 	void stop();
 	//void calibrateGyroSensor();
 	ev3::Vector2c getPosition() const;

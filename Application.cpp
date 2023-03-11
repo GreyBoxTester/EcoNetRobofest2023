@@ -14,7 +14,7 @@ void Application::waitInit() const
 void Application::identifyFieldSide()
 {
 	robot.turnToDirection({ 1, 0 });
-	if (!robot.checkBorder()) 
+	if (!robot.checkBorder(true)) 
 	{ 
 		robot.setPosition({ 4, 0 });
 		field.flipBottomLine(); 
@@ -25,16 +25,18 @@ void Application::identifyFieldSide()
 void Application::sortFirstThree()
 {
 	robot.driveOneCellForward(DRIVE_TO_LINE_COUNTS);
+	if (robot.checkBorder(false)) { field.addBorder(robot.getPosition(), robot.getDirection()); }
+	bool startInCenter = false;
 	for (int i = 0; i < 3; i++)
 	{
-		goToZigZag(Field::Cell::Type::InterferingRubbish, false);
+		goToZigZag(Field::Cell::Type::InterferingRubbish, startInCenter);
 
 		robot.openGrabbers();
 		int32_t movedBy = 0;
 		RubbishType rubbish = robot.grabAndIdentifyRubbish(&movedBy);
 		field.at(robot.getPosition()).type = Field::Cell::Type::Empty;
 		robot.driveForMotorCounts((DRIVE_TO_CENTER_COUNTS - DRIVE_TO_LINE_COUNTS) - movedBy);
-		if (rubbish == RubbishType::None) { continue; }
+		if (rubbish == RubbishType::None) { startInCenter = true; continue; }
 
 		goToZigZag(getDestinationCellType(rubbish), true);
 
@@ -43,8 +45,9 @@ void Application::sortFirstThree()
 		robot.closeGrabbers(false);
 		robot.turnToDirection({ 0, 1 });
 		robot.setPosition(robot.getPosition() + robot.getDirection());
+		if (robot.checkBorder(false)) { field.addBorder(robot.getPosition(), robot.getDirection()); }
 	}
-	robot.driveForMotorCounts(DRIVE_TO_CENTER_COUNTS - DRIVE_TO_LINE_COUNTS);
+	if (!startInCenter) { robot.driveForMotorCounts(DRIVE_TO_CENTER_COUNTS - DRIVE_TO_LINE_COUNTS); }
 }
 
 void Application::sortRubbish()
@@ -105,14 +108,14 @@ void Application::goTo(Field::Cell::Type destination, bool driveToLastCellCenter
 			
 			if (!(robot.getPosition().y == 1 && robot.getDirection() != ev3::Vector2c(0, 1)))
 			{
-				if (robot.checkBorder()) { field.addBorder(robot.getPosition(), robot.getDirection()); }
+				if (robot.checkBorder(true)) { field.addBorder(robot.getPosition(), robot.getDirection()); }
 			}
 
 			robot.turnToDirection(direction);
 			
 			if (!(robot.getPosition().y == 1 && robot.getDirection() != ev3::Vector2c(0, 1)))
 			{
-				if (robot.checkBorder()) { field.addBorder(robot.getPosition(), robot.getDirection()); break; }
+				if (robot.checkBorder(true)) { field.addBorder(robot.getPosition(), robot.getDirection()); break; }
 			}
 
 			if (i < path.size() - 2)

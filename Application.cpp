@@ -9,6 +9,7 @@ Application::Application()
 void Application::waitInit() const
 {
 	while (!initialized) { ev3::Time::delay(10); }
+	ev3::Time::delay(2000);
 }
 
 void Application::identifyFieldSide()
@@ -24,18 +25,20 @@ void Application::identifyFieldSide()
 
 void Application::sortFirstThree()
 {
+	bool firstItemSorted = false;
 	robot.driveOneCellForward(DRIVE_TO_LINE_COUNTS);
 	if (robot.checkBorder(false)) { field.addBorder(robot.getPosition(), robot.getDirection()); }
 	bool startInCenter = false;
 	for (int i = 0; i < 3; i++)
 	{
 		goToZigZag(Field::Cell::Type::InterferingRubbish, startInCenter);
-
+		startInCenter = false;
 		robot.openGrabbers();
 		int32_t movedBy = 0;
 		RubbishType rubbish = robot.grabAndIdentifyRubbish(&movedBy);
 		field.at(robot.getPosition()).type = Field::Cell::Type::Empty;
-		robot.driveForMotorCounts((DRIVE_TO_CENTER_COUNTS - DRIVE_TO_LINE_COUNTS) - movedBy);
+		robot.driveForMotorCounts((DRIVE_TO_CENTER_COUNTS - (firstItemSorted ? DRIVE_TO_LINE_COUNTS : 0)) - movedBy);
+		firstItemSorted = true;
 		if (rubbish == RubbishType::None) { startInCenter = true; continue; }
 
 		goToZigZag(getDestinationCellType(rubbish), true);
@@ -136,21 +139,23 @@ void Application::goToZigZag(Field::Cell::Type destination, bool startInCenter)
 {
 	Path path;
 	pathGen.generatePath(field, robot.getPosition(), robot.getDirection(), destination, true, &path);
+	ev3::ColorDef nextColor = ev3::ColorDef::Black;
 	for (size_t i = 0; i < path.size() - 1; i++)
 	{
+		if (i == path.size() - 2) { nextColor = getDestinationCellColor(destination); }
 		ev3::Vector2c direction = path[i + 1] - path[i];
 		if (field.at(robot.getPosition()).canDriveOnCenter())
 		{
 			if (i > 0 || !startInCenter) { robot.driveForMotorCounts(DRIVE_TO_CENTER_COUNTS - DRIVE_TO_LINE_COUNTS); }
 			robot.turnToDirection(direction);
-			robot.driveOneCellForward(DRIVE_TO_LINE_COUNTS);
+			robot.driveOneCellForward(DRIVE_TO_LINE_COUNTS, nextColor);
 		}
 		else
 		{
 			if (direction != robot.getDirection())
 			{
-				if (direction == turnRight(robot.getDirection())) { robot.driveAroundTurnRight(); }
-				else if (direction == turnLeft(robot.getDirection())) { robot.driveAroundTurnLeft(); }
+				if (direction == turnRight(robot.getDirection())) { robot.driveAroundTurnRight(nextColor); }
+				else if (direction == turnLeft(robot.getDirection())) { robot.driveAroundTurnLeft(nextColor); }
 			}
 			else
 			{
@@ -168,6 +173,17 @@ Field::Cell::Type Application::getDestinationCellType(RubbishType rubbish)
 	case RubbishType::Can: return Field::Cell::Type::CanStorage;
 	case RubbishType::Bottle: return Field::Cell::Type::BottleStorage;
 	default: return Field::Cell::Type::Empty;
+	}
+}
+
+ev3::ColorDef Application::getDestinationCellColor(Field::Cell::Type destination)
+{
+	switch (destination)
+	{
+	case Field::Cell::Type::PaperStorage: return ev3::ColorDef::Green;
+	case Field::Cell::Type::CanStorage: return ev3::ColorDef::Red;
+	case Field::Cell::Type::BottleStorage: return ev3::ColorDef::Black;
+	default: return ev3::ColorDef::Black;
 	}
 }
 

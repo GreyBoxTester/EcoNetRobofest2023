@@ -5,7 +5,6 @@ Robot::Robot()
 	  rMotor(ev3::MotorPort::C, ev3::MotorType::Medium, false),
 	  lGrabberMotor(ev3::MotorPort::A, ev3::MotorType::Unregulated, false),
 	  rGrabberMotor(ev3::MotorPort::D, ev3::MotorType::Unregulated, false),
-	  //lColorSensor(ev3::SensorPort::S2),
 	  distanceSensor(ev3::SensorPort::S1),
 	  borderDistanceSensor(ev3::SensorPort::S2),
 	  rColorSensor(ev3::SensorPort::S3),
@@ -46,8 +45,6 @@ RubbishType Robot::grabAndIdentifyRubbish(int32_t* countsOut)
 		ev3::Time::delay(1); 
 		if (borderDistanceSensor.getDistance() < MINIMAL_BORDER_DISTANCE || lMotor.getCounts() > (DRIVE_TO_CENTER_COUNTS - DRIVE_TO_LINE_COUNTS) * 2) { lMotor.stop(true); rMotor.stop(true); break; }
 	}
-	//if (countsOut != nullptr) { *countsOut = lMotor.getCounts(); }
-	//lMotor.resetCounts();
 	lMotor.setPower(15);
 	rMotor.setPower(15);
 
@@ -89,8 +86,9 @@ RubbishType Robot::grabAndIdentifyRubbish(int32_t* countsOut)
 	for (int i = 0; i < 2; i++)
 	{
 		lGrabberMotor.setPower(-GRABBER_MOTORS_POWER);
-		while (lGrabberMotor.getSpeed() > -6) { ev3::Time::delay(1); }
-		while (lGrabberMotor.getSpeed() < -4) { ev3::Time::delay(1); }
+		ev3::Time::Clock clock;
+		while (lGrabberMotor.getSpeed() > -10 && clock.getElapsedTime() < 3000) { ev3::Time::delay(1); }
+		while (lGrabberMotor.getSpeed() < -4 && clock.getElapsedTime() < 3000) { ev3::Time::delay(1); }
 		lGrabberMotor.stop(false);
 		ev3::Time::delay(100);
 		lGrabberMotor.stop(true);
@@ -126,12 +124,6 @@ RubbishType Robot::grabAndIdentifyRubbish(int32_t* countsOut)
 
 void Robot::placeRubbish()
 {
-	/*lGrabberMotor.rotate(LEFT_GRABBER_MOTOR_OPEN_ANGLE - lGrabberMotor.getCounts(), GRABBER_MOTORS_POWER);
-	rGrabberMotor.setPower(GRABBER_MOTORS_POWER);
-	ev3::Time::delay(500);
-	while (rColorSensor.getColor() != ev3::ColorDef::Yellow) { ev3::Time::delay(1); }
-	rGrabberMotor.rotate(-105, GRABBER_MOTORS_POWER);*/
-	//openGrabbers();
 	driveForMotorCounts(360);
 	driveForMotorCounts(-360);
 }
@@ -226,16 +218,16 @@ void Robot::driveForMotorCounts(int32_t counts)
 	driver.stop();
 }
 
-void Robot::driveToLine()
+void Robot::driveToLine(ev3::ColorDef color)
 {
 	driver.setSpeed(DEFAULT_SPEED);
-	while (rColorSensor.getColor() != ev3::ColorDef::Black) { driver.drive(); }
+	while (rColorSensor.getColor() != color) { driver.drive(); }
 	driver.stop();
 }
 
-void Robot::driveOneCellForward(int32_t additionalCounts)
+void Robot::driveOneCellForward(int32_t additionalCounts, ev3::ColorDef color)
 {
-	driveToLine();
+	driveToLine(color);
 	driveForMotorCounts(additionalCounts);
 	position += currentDirection;
 }
@@ -266,25 +258,25 @@ void Robot::driveAroundForward(bool right)
 	position += currentDirection;
 }
 
-void Robot::driveAroundTurnLeft()
+void Robot::driveAroundTurnLeft(ev3::ColorDef color)
 {
 	currentDirection = turnLeft(currentDirection);
 	position += currentDirection;
 
 	turnToAngle(directionAngle - 45);
-	driveToLine();
+	driveToLine(color);
 	turnToAngle(directionAngle - 45);
 	driver.stop();
 }
 
-void Robot::driveAroundTurnRight()
+void Robot::driveAroundTurnRight(ev3::ColorDef color)
 {
 	currentDirection = turnRight(currentDirection);
 	position += currentDirection;
 
 	turnToAngle(directionAngle + 45);
 	driveForMotorCounts(180);
-	driveToLine();
+	driveToLine(color);
 	driveForMotorCounts(270);
 	turnToAngle(directionAngle + 45);
 	driver.stop();
@@ -292,14 +284,6 @@ void Robot::driveAroundTurnRight()
 
 bool Robot::checkBorder(bool onCenter)
 {
-	/*uint16_t dist = 0; 
-	for (int i = 0; i < 20; i++)
-	{
-		dist += borderDistanceSensor.getDistance();
-		ev3::Time::delay(5);
-	}
-
-	dist /= 20;*/
 	uint16_t dist = borderDistanceSensor.getDistance();
 	ev3::Console::write("border: %d", dist);
 	return dist < (onCenter ? BORDER_DISTANCE : BORDER_DISTANCE_FROM_LINE);
@@ -309,26 +293,6 @@ void Robot::stop()
 {
 	driver.stop();
 }
-
-/*void Robot::calibrateGyroSensor()
-{
-	lMotor.setPower(15);
-	rMotor.setPower(15);
-	ev3::Time::delay(3000);
-	lMotor.stop(false);
-	rMotor.stop(false);
-	ev3::Time::delay(200);
-	int16_t delta = gyroSensor.getAngle() - totalAngle;
-	ev3::Console::write("delta: %d", delta);
-	lMotor.setPower(-15);
-	rMotor.setPower(-15);
-	ev3::Time::delay(500);
-	turnToAngle(delta);
-	driveForMotorCounts(-200);
-	ev3::Time::delay(500);
-	gyroSensor.reset();
-	ev3::Time::delay(500);
-}*/
 
 ev3::Vector2c Robot::getPosition() const
 {

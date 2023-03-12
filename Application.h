@@ -14,7 +14,8 @@ public:
 	void goToFinish();
 	void goTo(Field::Cell::Type destination, bool driveToLastCellCenter, bool openGrabbers);
 	void goToZigZag(Field::Cell::Type destination, bool startInCenter);
-	Field::Cell::Type getDestinationCellType(RubbishType rubbish);
+	static Field::Cell::Type getDestinationCellType(RubbishType rubbish);
+	static ev3::ColorDef getDestinationCellColor(Field::Cell::Type destination);
 	static void emergencyButtonHandler(intptr_t obj);
 private:
 	Robot robot;

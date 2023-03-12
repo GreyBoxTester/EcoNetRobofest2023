@@ -31,14 +31,13 @@ public:
 	void turnToDirection(ev3::Vector2c direction);
 	void turnToAngle(int16_t angle);
 	void driveForMotorCounts(int32_t counts);
-	void driveToLine();
-	void driveOneCellForward(int32_t additionalCounts = DRIVE_TO_CENTER_COUNTS);
+	void driveToLine(ev3::ColorDef color = ev3::ColorDef::Black);
+	void driveOneCellForward(int32_t additionalCounts = DRIVE_TO_CENTER_COUNTS, ev3::ColorDef color = ev3::ColorDef::Black);
 	void driveAroundForward(bool right);
-	void driveAroundTurnLeft();
-	void driveAroundTurnRight();
+	void driveAroundTurnLeft(ev3::ColorDef color = ev3::ColorDef::Black);
+	void driveAroundTurnRight(ev3::ColorDef color = ev3::ColorDef::Black);
 	bool checkBorder(bool onCenter);
 	void stop();
-	//void calibrateGyroSensor();
 	ev3::Vector2c getPosition() const;
 	void setPosition(ev3::Vector2c pos);
 	ev3::Vector2c getDirection() const;
